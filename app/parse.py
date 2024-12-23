@@ -1,4 +1,5 @@
 import csv
+import time
 import requests
 from dataclasses import dataclass, astuple, fields
 
@@ -30,19 +31,18 @@ def parse_single_quote(quote: Tag) -> Quote:
         tags=[tag.text for tag in quote.select(".tag")],
     )
 
-def get_soup(url: str=BASE_URL) -> BeautifulSoup:
-    text = requests.get(url).content
-    return BeautifulSoup(text, features="html.parser")
+
+def get_soup(url: str, session: requests.Session) -> BeautifulSoup:
+    response = session.get(url)
+    return BeautifulSoup(response.content, features="html.parser")
 
 
-def get_single_page_quotes(url: str=BASE_URL) -> [Quote]:
-    soup = get_soup(url)
+def get_single_page_quotes(soup: BeautifulSoup) -> [Quote]:
     all_quotes = soup.select(".quote")
     return [parse_single_quote(quote) for quote in all_quotes]
 
 
-def write_csv(output_csv_path: str, url) -> None:
-    quotes = get_single_page_quotes(url)
+def write_csv(output_csv_path: str, quotes: [Quote]) -> None:
     with open(output_csv_path, "a", newline="", encoding="utf-8") as csvfile:
         writer = csv.writer(csvfile)
         writer.writerows([astuple(quote) for quote in quotes])
@@ -50,15 +50,18 @@ def write_csv(output_csv_path: str, url) -> None:
 
 def parse_all_site(output_csv_path: str):
     write_fields_name_csv(output_csv_path)
-    all_quotes = get_single_page_quotes()
+    session = requests.Session()
     num_page = 1
-    soup = get_soup()
-    while soup.select_one(".next"):
+    while True:
         url = f"{BASE_URL}/page/{num_page}"
-        write_csv(output_csv_path, url)
+        soup = get_soup(url, session)
+        quotes = get_single_page_quotes(soup)
+        if not quotes:
+            break
+        write_csv(output_csv_path, quotes)
+        print(f"Processed page {num_page}")
         num_page += 1
-        soup = get_soup(f"{BASE_URL}/page/{num_page}")
-    return all_quotes
+        time.sleep(1)
 
 
 def main(output_csv_path: str) -> None:
