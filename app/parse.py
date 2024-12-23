@@ -16,9 +16,6 @@ class Quote:
     tags: list[str]
 
 
-# QUOTES_FIELDS =[field.name for field in fields(Quote)]
-
-
 def parse_single_quote(quote: Tag) -> Quote:
     return Quote(
         text=quote.select_one(".text").text,
@@ -31,8 +28,17 @@ def get_all_quotes() -> [Quote]:
     text = requests.get(BASE_URL).content
     soup = BeautifulSoup(text, features="html.parser")
     all_quotes = soup.select(".quote")
-    print ([parse_single_quote(quote) for quote in all_quotes])
+    return [parse_single_quote(quote) for quote in all_quotes]
 
+
+QUOTES_FIELDS =[field.name for field in fields(Quote)]
+
+def write_csv() -> None:
+    quotes = get_all_quotes()
+    with open("output_csv_path.csv", "w") as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(QUOTES_FIELDS)
+        writer.writerows([astuple(quote) for quote in quotes])
 
 
 # def get_single_page_quotes(page_soup: Tag) -> [Quote]:
@@ -53,13 +59,9 @@ def get_all_quotes() -> [Quote]:
 #     return all_quotes
 #
 #
-# def write_csv(quotes: [Quote]) -> None:
-#     with open("output_csv_path", "w") as csvfile:
-#         writer = csv.writer(csvfile)
-#         writer.writerow(QUOTES_FIELDS)
-#         writer.writerows([astuple(quote) for quote in quotes])
+
 #
-# QUOTES = get_all_quotes()
+#
 
 
 # def main(output_csv_path: str) -> None:
@@ -70,7 +72,8 @@ def get_all_quotes() -> [Quote]:
 
 def main():
     # return get_all_quotes()
-    get_all_quotes()
+    # get_all_quotes()
+    return write_csv()
 
 if __name__ == "__main__":
     # main("quotes.csv")
